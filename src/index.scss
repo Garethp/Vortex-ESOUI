@@ -1,0 +1,56 @@
+.esoui-mod-version {
+  max-width: 30%;
+  width: 30%;
+
+  & >.panel {
+    height: initial;
+    flex-direction: initial;
+    margin-bottom: 10px;
+  }
+
+  & .panel-body {
+    padding-top: 0px;
+
+    &:before {
+      display: none;
+    }
+
+    &:after {
+      display: none;
+    }
+  }
+}
+
+.esoui-mod-details {
+  overflow: auto;
+  width: auto;
+  margin-right: 15px;
+
+  .description-text {
+    overflow: visible;
+  }
+
+  .layout-flex {
+    overflow: initial;
+  }
+
+  .panel {
+    height: auto;
+  }
+}
+
+.esoui-mod-header {
+  padding-bottom: 10px;
+
+  .panel-body {
+    padding: 0 20px;
+
+    &:before {
+      display: none;
+    }
+
+    &:after {
+      display: none;
+    }
+  }
+}
