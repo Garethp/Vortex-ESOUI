@@ -82,6 +82,38 @@ export default ({
                   calc: (mod) => mod.author,
                   edit: {},
                 },
+                {
+                  id: "favourites",
+                  name: "Favourites",
+                  description: "The amount of people who favourite a mod",
+                  calc: (mod: ModListItem) => mod.favorites,
+                  edit: {},
+                  placement: "table",
+                  isSortable: true,
+                },
+                // {
+                //   id: "downloads",
+                //   name: "Downloads",
+                //   description: "The total downloads that this mod has",
+                //   edit: {},
+                //   placement: "table",
+                //   isSortable: true,
+                //   calc: (mod: ModListItem) => largeNumToString(mod.downloads),
+                //   sortFuncRaw: (a: ModListItem, b: ModListItem) =>
+                //     a.downloads - b.downloads,
+                // },
+                // {
+                //   id: "monthlyDownloads",
+                //   name: "Monthly Downloads",
+                //   description: "The amount of Downloads per Month this mod has",
+                //   edit: {},
+                //   placement: "table",
+                //   isSortable: true,
+                //   calc: (mod: ModListItem) =>
+                //     largeNumToString(mod.downloadsMonthly),
+                //   sortFuncRaw: (a: ModListItem, b: ModListItem) =>
+                //     a.downloadsMonthly - b.downloadsMonthly,
+                // },
               ]}
               multiSelect={false}
               onChangeSelection={(ids) => {

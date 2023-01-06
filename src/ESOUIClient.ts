@@ -23,6 +23,7 @@ export type ModListItem = {
   author: string;
   fileInfoUri: string;
   downloads: number;
+  downloadsMonthly: number;
   favorites: number;
   addons: ModAddon[];
   checksum: string;

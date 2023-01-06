@@ -163,6 +163,10 @@ const init = (context: IExtensionContext) => {
 
       const checksum = input.download?.fileMD5 ?? "";
 
+      if (!checksum) {
+        return;
+      }
+
       const foundMod = await client
         .getAllMods()
         .then((mods) => mods.find((mod) => mod.checksum == checksum));
@@ -177,6 +181,7 @@ const init = (context: IExtensionContext) => {
         downloadGame: "teso",
         lastUpdate: foundMod.lastUpdate,
         modPage: foundMod.fileInfoUri,
+        fileId: foundMod.addons[0].path,
       };
 
       if (input.download?.installed?.modId) {
