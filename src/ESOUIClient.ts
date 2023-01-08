@@ -48,7 +48,15 @@ type CachedModListItem = ModListItem & {
   cacheTTL: number;
 };
 
-let sharedGetAllCall: Promise<ModListItem[]> = null;
+function isCachedModItem(mod: ModListItem | ModItem): mod is ModItem {
+  return (mod as ModItem).cacheExpiry !== undefined;
+}
+
+function areAllModsItemsCached(
+  mods: Array<ModListItem | ModItem>
+): mods is ModItem[] {
+  return !mods.some((mod) => !isCachedModItem(mod));
+}
 
 export default class ESOUIClient extends HttpClient {
   private api: IExtensionApi;
@@ -81,32 +89,52 @@ export default class ESOUIClient extends HttpClient {
   getModDetails = async (
     modId: number | string,
     force?: boolean
-  ): Promise<ModItem> => {
+  ): Promise<ModItem> =>
+    this.getManyModDetails([modId], force).then((mods) => mods[`${modId}`]);
+
+  getManyModDetails = async (
+    modIds: Array<number | string>,
+    force?: boolean
+  ): Promise<{ [id: string]: ModItem }> => {
     const cache = this.getState();
 
-    const cachedMod = this.getState().mods.find(
-      (item) => `${item.id}` == `${modId}`
-    );
+    const getAllCachedItems = (
+      modIds: Array<number | string>
+    ): { [id: string]: ModItem } | null => {
+      const mods = modIds.map((modId) =>
+        this.getState().mods.find((item) => `${item.id}` == `${modId}`)
+      );
 
-    if (
-      !force &&
-      cachedMod &&
-      cache.cacheExpiry > Date.now() &&
-      // @ts-ignore
-      cachedMod?.cacheExpiry &&
-      // @ts-ignore
-      cachedMod.cacheExpiry > Date.now()
-    ) {
-      return cachedMod as ModItem;
+      const now = Date.now();
+
+      if (!mods.every((mod) => !!mod)) return null;
+      if (!areAllModsItemsCached(mods)) return null;
+      if (mods.some((mod) => mod.cacheExpiry <= now)) return null;
+
+      return mods.reduce(
+        (allMods, mod) => ({ ...allMods, [`${mod.id}`]: mod }),
+        {}
+      );
+    };
+
+    const cachedMods = getAllCachedItems(modIds);
+
+    if (!force && cache.cacheExpiry > Date.now() && !!cachedMods) {
+      return cachedMods;
     }
 
-    const mod = (await this.getApiResponse(
-      `https://api.mmoui.com/v4/game/ESO/filedetails/${modId}.json`
-    ).then((mod: ModItem[]) => mod[0])) as ModItem;
+    const mods: ModItem[] = await this.getApiResponse(
+      `https://api.mmoui.com/v4/game/ESO/filedetails/${modIds.join(",")}.json`
+    );
 
-    this.api.store.dispatch(updateModItem(mod));
+    mods.forEach((mod) => {
+      this.api.store.dispatch(updateModItem(mod));
+    });
 
-    return mod;
+    return mods.reduce(
+      (allMods, mod) => ({ ...allMods, [`${mod.id}`]: mod }),
+      {}
+    );
   };
 
   getDependentMods = async (

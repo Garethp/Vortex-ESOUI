@@ -70,32 +70,45 @@ const checkForUpdates =
 
     const client = new ESOUIClient(api);
 
-    const modsToUpdate = [];
+    const modIds = filteredMods
+      .map((mod) => util.getSafe(mod.attributes, ["modId"], null))
+      .filter((id) => !!id);
 
-    for await (const mod of filteredMods) {
-      const newDetails = await client.getModDetails(
-        util.getSafe(mod.attributes, ["modId"], null),
-        true
+    const modsToUpdate = await client
+      .getManyModDetails(modIds, true)
+      .then((modDetails) => {
+        return Object.values(modDetails);
+      })
+      .then((modDetails) => {
+        return modDetails.map((modDetail) => ({
+          details: modDetail,
+          mod: filteredMods.find(
+            (mod) =>
+              `${util.getSafe(mod.attributes, ["modId"], null)}` ==
+              `${modDetail.id}`
+          ),
+        }));
+      })
+      .then((mod) =>
+        mod.filter(
+          (mod) =>
+            mod.details.lastUpdate >
+            util.getSafe(mod.mod.attributes, ["lastUpdate"], null)
+        )
       );
-      if (
-        newDetails.lastUpdate <=
-        util.getSafe(mod.attributes, ["lastUpdate"], null)
-      )
-        continue;
 
-      modsToUpdate.push(mod.id);
-
+    modsToUpdate.forEach((mod) => {
       api.store.dispatch(
         actions.setModAttribute(
           gameId,
-          mod.id,
+          mod.mod.id,
           "newestVersion",
-          newDetails.version
+          mod.details.version
         )
       );
-    }
+    });
 
-    return modsToUpdate;
+    return modsToUpdate.reduce((allIds, mod) => [...allIds, mod.mod.id], []);
 
     // @TODO: Throw some progress notifications in here maybe
   };
