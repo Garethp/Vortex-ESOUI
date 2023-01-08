@@ -16,7 +16,9 @@ import * as fs from "fs";
 import { getDependantMods } from "./utils";
 import { IState } from "vortex-api/lib/types/IState";
 import { installMod } from "./install";
-import { esoUIReducer } from "./actions";
+import { esoUIReducer } from "./redux/main-state";
+import Settings from "./Settings/Settings";
+import { settingsReducer } from "./redux/settings";
 
 function makeRepositoryLookup(api: IExtensionApi) {
   return async (repoInfo: IModRepoId): Promise<IModLookupResult[]> => {
@@ -318,6 +320,9 @@ const init = (context: IExtensionContext) => {
   );
 
   context.registerReducer(["persistent", "esoui"], esoUIReducer);
+  context.registerReducer(["settings", "esoui"], settingsReducer);
+
+  context.registerSettings("Download", Settings, undefined, undefined, 100);
 
   context.once(() => {
     context.api.registerProtocol("vortex-esoui", true, async (url, install) => {
@@ -347,8 +352,7 @@ const init = (context: IExtensionContext) => {
       // We do this to pre-warm the cache
       new ESOUIClient(context.api).getAllMods();
 
-      // @TODO: Turn this on/off with a setting
-      if (true) return;
+      if (!context.api.getState().settings["esoui"]["autoDownload"]) return;
       if (gameMode !== "teso") return;
 
       context.api

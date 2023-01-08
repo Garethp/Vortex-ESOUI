@@ -1,7 +1,7 @@
 import { IReducerSpec } from "vortex-api/lib/types/IExtensionContext";
 import { createAction } from "redux-act";
 import { util } from "vortex-api";
-import { ModItem, ModList, ModListItem } from "./ESOUIClient";
+import { ModItem, ModListItem } from "../ESOUIClient";
 
 export type ESOUIState = {
   cacheExpiry: number;

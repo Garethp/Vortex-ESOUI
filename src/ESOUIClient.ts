@@ -1,6 +1,6 @@
 import { HttpClient } from "vortex-ext-http";
 import { IExtensionApi } from "vortex-api/lib/types/IExtensionContext";
-import { ESOUIState, updateModItem, updateModList } from "./actions";
+import { ESOUIState, updateModItem, updateModList } from "./redux/main-state";
 
 export type ModList = {
   [modId: number]: ModListItem | ModItem;
