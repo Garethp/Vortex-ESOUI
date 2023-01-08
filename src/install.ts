@@ -8,13 +8,6 @@ export const installMod = async (mod: ModItem, api: IExtensionApi) => {
   const client = new ESOUIClient(api);
   const allMods = await client.getAllMods();
 
-  const modListItem = allMods.find((item) => item.id == mod.id);
-
-  const requiredDependencies = modListItem.addons.reduce(
-    (mods, addon) => [...mods, ...(addon.requiredDependencies ?? [])],
-    [] as string[]
-  );
-
   const modsToInstall: {
     id: number;
     title: string;

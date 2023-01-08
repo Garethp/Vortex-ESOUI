@@ -36,7 +36,7 @@ export const esoUIReducer: IReducerSpec = {
         ...mod,
       }) as ESOUIState;
     },
-    [clearEsoUICache as any]: (state): ESOUIState => {
+    [clearEsoUICache as any]: (): ESOUIState => {
       return { cacheExpiry: 0, mods: [] };
     },
   },

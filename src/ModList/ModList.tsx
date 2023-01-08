@@ -2,19 +2,11 @@ import React, { useEffect, useState } from "react";
 import { IExtensionContext } from "vortex-api/lib/types/IExtensionContext";
 import LoadingSpinner from "../LoadingSpinner";
 import ESOUIClient, { ModItem, ModListItem } from "../ESOUIClient";
-import { MainPage, FlexLayout, Table, TableTextFilter, util } from "vortex-api";
+import { MainPage, FlexLayout, Table, TableTextFilter } from "vortex-api";
 import ModDetails from "./ModDetails";
-import { IMod } from "vortex-api/lib/extensions/mod_management/types/IMod";
-import { getDependantMods } from "../utils";
 import { getAddedModIds, installMod } from "../install";
 
-export default ({
-  api,
-  mods,
-}: {
-  api: IExtensionContext["api"];
-  mods: string[];
-}) => {
+export default ({ api }: { api: IExtensionContext["api"] }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [allMods, setAllMods] = useState<ModListItem[]>([]);
   const [selectedMod, setSelectedMod] = useState<ModItem>(null);

@@ -2,7 +2,6 @@ import { actions, selectors, util } from "vortex-api";
 import {
   IExtensionApi,
   IExtensionContext,
-  ProgressDelegate,
 } from "vortex-api/lib/types/IExtensionContext";
 import ModList from "./ModList/ModList";
 import {
@@ -164,54 +163,51 @@ const init = (context: IExtensionContext) => {
     props: () => ({ api: context.api, mods: [] }),
   });
 
-  context.registerAttributeExtractor(
-    50,
-    async (input: any, modPath: string) => {
-      // @TODO: Could we move this into the installer?
-      if (
-        !["teso", "esoui.com"].includes(input.meta?.gameId) &&
-        input.download?.modInfo?.source !== "esoui"
-      )
-        return;
+  context.registerAttributeExtractor(50, async (input: any) => {
+    // @TODO: Could we move this into the installer?
+    if (
+      !["teso", "esoui.com"].includes(input.meta?.gameId) &&
+      input.download?.modInfo?.source !== "esoui"
+    )
+      return;
 
-      const client = new ESOUIClient(context.api);
+    const client = new ESOUIClient(context.api);
 
-      const checksum = input.download?.fileMD5 ?? "";
+    const checksum = input.download?.fileMD5 ?? "";
 
-      if (!checksum) {
-        return;
-      }
-
-      const foundMod = await client
-        .getAllMods()
-        .then((mods) => mods.find((mod) => mod.checksum == checksum));
-
-      if (!foundMod) return;
-
-      const attributes = {
-        author: foundMod.author,
-        version: foundMod.version,
-        modId: foundMod.id,
-        name: foundMod.title,
-        downloadGame: "teso",
-        lastUpdate: foundMod.lastUpdate,
-        modPage: foundMod.fileInfoUri,
-        fileId: foundMod.addons[0].path,
-      };
-
-      if (input.download?.installed?.modId) {
-        context.api.store.dispatch(
-          actions.setModAttributes(
-            "teso",
-            input.download?.installed?.modId,
-            attributes
-          )
-        );
-      }
-
-      return attributes;
+    if (!checksum) {
+      return;
     }
-  );
+
+    const foundMod = await client
+      .getAllMods()
+      .then((mods) => mods.find((mod) => mod.checksum == checksum));
+
+    if (!foundMod) return;
+
+    const attributes = {
+      author: foundMod.author,
+      version: foundMod.version,
+      modId: foundMod.id,
+      name: foundMod.title,
+      downloadGame: "teso",
+      lastUpdate: foundMod.lastUpdate,
+      modPage: foundMod.fileInfoUri,
+      fileId: foundMod.addons[0].path,
+    };
+
+    if (input.download?.installed?.modId) {
+      context.api.store.dispatch(
+        actions.setModAttributes(
+          "teso",
+          input.download?.installed?.modId,
+          attributes
+        )
+      );
+    }
+
+    return attributes;
+  });
 
   context.registerInstaller(
     "esoui",
@@ -220,12 +216,7 @@ const init = (context: IExtensionContext) => {
       supported: selectors.activeGameId(context.api.getState()) === "teso",
       requiredFiles: [],
     }),
-    async (
-      files: string[],
-      destinationPath: string,
-      gameId: string,
-      progress: ProgressDelegate
-    ) => {
+    async (files: string[], destinationPath: string) => {
       /**
        * The dependency mapping for ESO UI Mods are very messy. We should account for not being able to find some
        * and show an info in that case, letting the user find them instead.
@@ -259,11 +250,6 @@ const init = (context: IExtensionContext) => {
         const modData = fs
           .readFileSync(path.join(destinationPath, infoFile))
           .toString();
-
-        const [, optionalMods] =
-          modData.match(`## OptionalDependsOn: ((([^\\s]+) ?)+)`) ?? [];
-
-        const optionalModsList = !!optionalMods ? optionalMods.split(" ") : [];
 
         const [, requiredMods] =
           modData.match(`## DependsOn: ((([^\\s]+) ?)+)`) ?? [];
@@ -325,7 +311,7 @@ const init = (context: IExtensionContext) => {
   context.registerSettings("Download", Settings, undefined, undefined, 100);
 
   context.once(() => {
-    context.api.registerProtocol("vortex-esoui", true, async (url, install) => {
+    context.api.registerProtocol("vortex-esoui", true, async (url) => {
       if (!url.match("^vortex-esoui://install/([\\d]+)$")) {
         return;
       }

@@ -2,10 +2,6 @@ import { HttpClient } from "vortex-ext-http";
 import { IExtensionApi } from "vortex-api/lib/types/IExtensionContext";
 import { ESOUIState, updateModItem, updateModList } from "./redux/main-state";
 
-export type ModList = {
-  [modId: number]: ModListItem | ModItem;
-};
-
 type ModAddon = {
   path: string;
   addOnVersion: string;
@@ -42,10 +38,6 @@ export type Image = {
   thumbUrl: string;
   imageUrl: string;
   description: string;
-};
-
-type CachedModListItem = ModListItem & {
-  cacheTTL: number;
 };
 
 function isCachedModItem(mod: ModListItem | ModItem): mod is ModItem {
