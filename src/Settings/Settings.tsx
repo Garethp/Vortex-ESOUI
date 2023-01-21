@@ -9,6 +9,7 @@ import * as Redux from "redux";
 
 type State = {
   autoDownload: boolean;
+  canEnable: boolean;
 };
 
 type DispatchProps = {
@@ -17,7 +18,7 @@ type DispatchProps = {
 
 type Props = State & DispatchProps;
 
-const SettingsPane = ({ autoDownload, setAutoDownload }: Props) => (
+const SettingsPane = ({ autoDownload, setAutoDownload, canEnable }: Props) => (
   <form>
     <FormGroup>
       <ControlLabel>Automatically Update ESO UI Addons</ControlLabel>
@@ -28,15 +29,26 @@ const SettingsPane = ({ autoDownload, setAutoDownload }: Props) => (
         selected game or when you select Elder Scrolls Online as your currently
         managed game
       </HelpBlock>
-      <Toggle checked={autoDownload} onToggle={setAutoDownload}>
+      <Toggle
+        checked={autoDownload}
+        onToggle={setAutoDownload}
+        disabled={!canEnable}
+      >
         Enable Automatic Updates for ESO UI Addons
       </Toggle>
+      {!canEnable && (
+        <HelpBlock>
+          In order to enable this setting, please enable the "Enable Mods when
+          installed" setting in the "Interface" tab
+        </HelpBlock>
+      )}
     </FormGroup>
   </form>
 );
 
 const mapStateToProps = (state: IState): State => ({
   autoDownload: state.settings["esoui"]["autoDownload"],
+  canEnable: state.settings.automation.enable,
 });
 
 const mapDispatchToProps = (

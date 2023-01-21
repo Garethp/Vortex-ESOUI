@@ -114,6 +114,7 @@ const checkForUpdates =
     // @TODO: Throw some progress notifications in here maybe
   };
 
+// @TODO: When a dependency is updated, the mods that depend on it don't update their reference idHint
 const installUpdates =
   (api: IExtensionApi) => async (gameId: string, modId: string) => {
     if (gameId !== "teso") return;
@@ -290,7 +291,7 @@ const init = (context: IExtensionContext) => {
               type: dependency.type,
               reference: {
                 logicalFileName: dependency.path,
-                md5Hint: dependency.checksum,
+                // md5Hint: dependency.checksum,
                 gameId: "teso",
                 repo: {
                   repository: "esoui",
@@ -338,7 +339,11 @@ const init = (context: IExtensionContext) => {
       // We do this to pre-warm the cache
       new ESOUIClient(context.api).getAllMods();
 
-      if (!context.api.getState().settings["esoui"]["autoDownload"]) return;
+      const settings = context.api.getState().settings;
+      const autoUpdate =
+        settings["esoui"]["autoDownload"] && settings.automation.enable;
+
+      if (!autoUpdate) return;
       if (gameMode !== "teso") return;
 
       context.api
@@ -422,8 +427,6 @@ const init = (context: IExtensionContext) => {
       return modSource === "esoui";
     }
   );
-
-  // @TODO: Add an auto-update option
 };
 
 module.exports = { default: init };

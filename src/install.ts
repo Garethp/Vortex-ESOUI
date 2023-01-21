@@ -1,7 +1,7 @@
 import { getDependantMods } from "./utils";
 import { IExtensionApi } from "vortex-api/lib/types/IExtensionContext";
 import ESOUIClient, { ModItem } from "./ESOUIClient";
-import { actions, util } from "vortex-api";
+import { actions, selectors, util } from "vortex-api";
 import { IMod } from "vortex-api/lib/extensions/mod_management/types/IMod";
 
 export const installMod = async (mod: ModItem, api: IExtensionApi) => {
@@ -86,7 +86,13 @@ export const installMod = async (mod: ModItem, api: IExtensionApi) => {
     modsToInstall.push(modToResolve);
   }
 
+  const settings = api.getState().settings;
+  const autoUpdate = settings.automation.enable;
+
+  // @TODO: Something goes wrong here when there's too many mods updating at once
   modsToInstall.forEach((mod) => {
+    const isAnUpdate = addedIds.includes(mod.id);
+
     api.events.emit(
       "start-download",
       [mod.downloadUri],
@@ -99,16 +105,39 @@ export const installMod = async (mod: ModItem, api: IExtensionApi) => {
       },
       mod.fileName,
       (err: Error, downloadId: string) => {
+        const downloads = api.getState().persistent.downloads.files;
         if (err !== null) return;
-        if (addedIds.includes(mod.id)) {
+        if (downloads[downloadId]?.state !== "finished") {
+          if (isAnUpdate) {
+            api.store.dispatch(
+              actions.setDownloadModInfo(downloadId, "startedAsUpdate", true)
+            );
+          }
+        } else {
+          if (!isAnUpdate || !autoUpdate) return;
+
+          const mods: { [id: string]: IMod } =
+            api.store.getState().persistent.mods.teso ?? {};
+          const modToDisable = Object.values(mods).find(
+            (modAttr) => `${modAttr.attributes["modId"]}` == `${mod.id}`
+          );
+
+          if (!modToDisable) return;
+
           api.store.dispatch(
-            actions.setDownloadModInfo(downloadId, "startedAsUpdate", true)
+            actions.setModsEnabled(
+              api,
+              selectors.activeProfile(api.getState()).id,
+              [modToDisable.id],
+              false,
+              {
+                willBeReplaced: true,
+              }
+            )
           );
         }
-
-        api.events.emit("start-install-download", downloadId);
       },
-      undefined,
+      "replace",
       {
         allowInstall: "force",
       }

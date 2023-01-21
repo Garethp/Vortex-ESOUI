@@ -20,6 +20,6 @@ export const settingsReducer: IReducerSpec = {
     },
   },
   defaults: {
-    autoDownload: true,
+    autoDownload: false,
   } as SettingsState,
 };
