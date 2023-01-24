@@ -89,10 +89,10 @@ export const installMod = async (mod: ModItem, api: IExtensionApi) => {
   const settings = api.getState().settings;
   const autoUpdate = settings.automation.enable;
 
-  // @TODO: Something goes wrong here when there's too many mods updating at once
   modsToInstall.forEach((mod) => {
     const isAnUpdate = addedIds.includes(mod.id);
 
+    // @TODO: Trying to make this more synchronous might not be a bad idea.
     api.events.emit(
       "start-download",
       [mod.downloadUri],
@@ -105,41 +105,68 @@ export const installMod = async (mod: ModItem, api: IExtensionApi) => {
       },
       mod.fileName,
       (err: Error, downloadId: string) => {
-        const downloads = api.getState().persistent.downloads.files;
+        const state = api.getState();
+        const downloads = state.persistent.downloads.files;
         if (err !== null) return;
-        if (downloads[downloadId]?.state !== "finished") {
-          if (isAnUpdate) {
-            api.store.dispatch(
-              actions.setDownloadModInfo(downloadId, "startedAsUpdate", true)
-            );
-          }
-        } else {
-          if (!isAnUpdate || !autoUpdate) return;
+        if (downloads[downloadId]?.state === "finished") {
+          const mods: { [id: string]: IMod } = state.persistent.mods.teso ?? {};
 
-          const mods: { [id: string]: IMod } =
-            api.store.getState().persistent.mods.teso ?? {};
-          const modToDisable = Object.values(mods).find(
+          const alreadyInstalledMods = Object.values(mods).filter(
             (modAttr) => `${modAttr.attributes["modId"]}` == `${mod.id}`
           );
 
-          if (!modToDisable) return;
+          const modIsActive = alreadyInstalledMods.some(
+            (alreadyInstalledMod) =>
+              selectors.activeProfile(state).modState[alreadyInstalledMod.id]
+                ?.enabled === true
+          );
 
-          api.store.dispatch(
-            actions.setModsEnabled(
-              api,
-              selectors.activeProfile(api.getState()).id,
-              [modToDisable.id],
-              false,
-              {
-                willBeReplaced: true,
+          api.events.emit(
+            "start-install-download",
+            downloadId,
+            {
+              allowAutoEnable: !alreadyInstalledMods.length || modIsActive,
+              unattended: true,
+            },
+            (err, modId) => {
+              if (!!err) return;
+              if (!autoUpdate && isAnUpdate && modIsActive) {
+                actions.setModsEnabled(
+                  api,
+                  selectors.activeProfile(api.getState()).id,
+                  [modId],
+                  true,
+                  { willBeReplaced: true }
+                );
+
+                alreadyInstalledMods.forEach((alreadyInstalledMod) => {
+                  const modIsActive = alreadyInstalledMods.some(
+                    (alreadyInstalledMod) =>
+                      selectors.activeProfile(state).modState[
+                        alreadyInstalledMod.id
+                      ]?.enabled === true
+                  );
+
+                  if (!modIsActive) return;
+
+                  actions.setModsEnabled(
+                    api,
+                    selectors.activeProfile(api.getState()).id,
+                    [alreadyInstalledMod.id],
+                    false,
+                    {
+                      willBeReplaced: true,
+                    }
+                  );
+                });
               }
-            )
+            }
           );
         }
       },
       "replace",
       {
-        allowInstall: "force",
+        allowInstall: false,
       }
     );
   });

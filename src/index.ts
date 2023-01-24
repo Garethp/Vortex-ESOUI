@@ -114,7 +114,6 @@ const checkForUpdates =
     // @TODO: Throw some progress notifications in here maybe
   };
 
-// @TODO: When a dependency is updated, the mods that depend on it don't update their reference idHint
 const installUpdates =
   (api: IExtensionApi) => async (gameId: string, modId: string) => {
     if (gameId !== "teso") return;
@@ -291,7 +290,12 @@ const init = (context: IExtensionContext) => {
               type: dependency.type,
               reference: {
                 logicalFileName: dependency.path,
-                // md5Hint: dependency.checksum,
+                md5Hint:
+                  // By default, the given checksum will always be for the latest version of the addon, since it's being
+                  // pulled from the API. If we have an installed, enabled, older version of that addon we want to use
+                  // that as the dependency
+                  getCurrentEnabledModForAddon(context.api, dependency.id)
+                    ?.attributes?.fileMD5 ?? dependency.checksum,
                 gameId: "teso",
                 repo: {
                   repository: "esoui",
@@ -335,13 +339,65 @@ const init = (context: IExtensionContext) => {
       makeRepositoryLookup(context.api)
     );
 
+    context.api.events.on(
+      "mods-enabled",
+      (modIds: string[], enabled: boolean, gameId: string) => {
+        if (!enabled || gameId !== "teso") return;
+        modIds.forEach((modId) => {
+          const api = context.api;
+          const mod = api.getState().persistent.mods[gameId][modId];
+          if (!mod) return;
+
+          const md5Hint =
+            api.getState().persistent.mods[gameId][modId]?.attributes?.fileMD5;
+
+          if (!md5Hint) return;
+
+          Object.values(api.getState().persistent.mods[gameId])
+            .filter((modToCheck) => {
+              if (!modToCheck.rules?.length) return false;
+
+              const relevantRules = modToCheck.rules.filter(
+                (rule) =>
+                  rule.reference.repo.repository === "esoui" &&
+                  rule.reference.repo.modId === `${mod.attributes.modId}`
+              );
+
+              return relevantRules.length > 0;
+            })
+            .forEach((modToCheck) => {
+              const ruleToUpdate = modToCheck.rules.find(
+                (rule) =>
+                  rule.reference.repo.repository === "esoui" &&
+                  rule.reference.repo.modId === `${mod.attributes.modId}`
+              );
+
+              if (!ruleToUpdate) return;
+
+              api.store.dispatch(
+                actions.removeModRule(gameId, modToCheck.id, ruleToUpdate)
+              );
+              api.store.dispatch(
+                actions.addModRule(gameId, modToCheck.id, {
+                  ...ruleToUpdate,
+                  reference: {
+                    ...ruleToUpdate.reference,
+                    idHint: undefined,
+                    md5Hint,
+                  },
+                })
+              );
+            });
+        });
+      }
+    );
+
     context.api.events.on("gamemode-activated", (gameMode: string) => {
       // We do this to pre-warm the cache
       new ESOUIClient(context.api).getAllMods();
 
       const settings = context.api.getState().settings;
-      const autoUpdate =
-        settings["esoui"]["autoDownload"] && settings.automation.enable;
+      const autoUpdate = settings["esoui"]["autoUpdate"];
 
       if (!autoUpdate) return;
       if (gameMode !== "teso") return;
@@ -427,6 +483,23 @@ const init = (context: IExtensionContext) => {
       return modSource === "esoui";
     }
   );
+};
+
+const getCurrentEnabledModForAddon = (
+  api: IExtensionApi,
+  addonId: string | number
+): IMod | undefined => {
+  const state = api.getState();
+
+  return Object.values(state.persistent.mods["teso"])
+    .filter(
+      (mod) =>
+        mod.attributes.source === "esoui" &&
+        `${mod.attributes.modId}` === `${addonId}`
+    )
+    .find(
+      (mod) => selectors.activeProfile(state).modState[mod.id]?.enabled === true
+    );
 };
 
 module.exports = { default: init };

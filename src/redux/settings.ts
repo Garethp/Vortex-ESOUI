@@ -2,24 +2,24 @@ import { IReducerSpec } from "vortex-api/lib/types/IExtensionContext";
 import { createAction } from "redux-act";
 
 export type SettingsState = {
-  autoDownload: boolean;
+  autoUpdate: boolean;
 };
 
-export const updateAutoDownload = createAction(
-  "ESO_UI_SETTINGS_AUTO_DOWNLOAD",
-  (autoDownload: boolean) => autoDownload
+export const updateAutoUpdate = createAction(
+  "ESO_UI_SETTINGS_AUTO_UPDATE",
+  (autoUpdate: boolean) => autoUpdate
 );
 
 export const settingsReducer: IReducerSpec = {
   reducers: {
-    [updateAutoDownload as any]: (
+    [updateAutoUpdate as any]: (
       state: SettingsState,
-      autoDownload: boolean
+      autoUpdate: boolean
     ): SettingsState => {
-      return { ...state, autoDownload };
+      return { ...state, autoUpdate: autoUpdate };
     },
   },
   defaults: {
-    autoDownload: false,
+    autoUpdate: false,
   } as SettingsState,
 };
