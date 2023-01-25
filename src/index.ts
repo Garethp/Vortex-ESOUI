@@ -116,6 +116,8 @@ const checkForUpdates =
 
 const installUpdates =
   (api: IExtensionApi) => async (gameId: string, modId: string) => {
+    // @TODO: Check if we already have an update installed and just enable that instead of re-installing it
+
     if (gameId !== "teso") return;
 
     const mods = api.getState().persistent.mods["teso"];
@@ -402,6 +404,8 @@ const init = (context: IExtensionContext) => {
       if (!autoUpdate) return;
       if (gameMode !== "teso") return;
 
+      const state = context.api.getState();
+
       context.api
         .emitAndAwait(
           "check-mods-version",
@@ -414,13 +418,23 @@ const init = (context: IExtensionContext) => {
         )
         .then(() => {
           const modsToUpdate = Object.values(
-            context.api.getState().persistent.mods?.teso ?? {}
-          ).filter(
-            (mod) =>
-              !!mod.attributes?.newestVersion &&
-              !!mod.attributes?.version &&
-              mod.attributes?.newestVersion !== mod.attributes.version
-          );
+            state.persistent.mods?.teso ?? {}
+          )
+            .filter(
+              (mod) =>
+                !!mod.attributes?.newestVersion &&
+                !!mod.attributes?.version &&
+                mod.attributes?.newestVersion !== mod.attributes.version
+            )
+            .filter(
+              (mod) =>
+                !Object.values(state.persistent.mods["teso"]).some(
+                  (installedMod) =>
+                    installedMod.attributes.modId === mod.attributes.modId &&
+                    installedMod.attributes.version ===
+                      mod.attributes.newestVersion
+                )
+            );
 
           const updateEvents = modsToUpdate.map((mod) =>
             context.api.emitAndAwait(

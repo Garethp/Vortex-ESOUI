@@ -1,5 +1,8 @@
 ## Changelog
 
+#### Version 0.1.3
+ * Fixed an issue where the auto-update would try to update mods even when the update was already installed
+
 #### Version 0.1.2
  * Improved the speed and efficiency of checking ESO UI for Addon updates
  * Added an option for Automatic Updates in the Downloads settings
