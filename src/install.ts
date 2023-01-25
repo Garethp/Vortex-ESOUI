@@ -3,6 +3,7 @@ import { IExtensionApi } from "vortex-api/lib/types/IExtensionContext";
 import ESOUIClient, { ModItem } from "./ESOUIClient";
 import { actions, selectors, util } from "vortex-api";
 import { IMod } from "vortex-api/lib/extensions/mod_management/types/IMod";
+import { GAME_ID } from "./constants";
 
 export const installMod = async (mod: ModItem, api: IExtensionApi) => {
   const client = new ESOUIClient(api);
@@ -97,7 +98,7 @@ export const installMod = async (mod: ModItem, api: IExtensionApi) => {
       "start-download",
       [mod.downloadUri],
       {
-        game: "teso",
+        game: GAME_ID,
         name: mod.title,
         source: "esoui",
         modId: mod.id,

@@ -18,6 +18,8 @@ import { installMod } from "./install";
 import { esoUIReducer } from "./redux/main-state";
 import Settings from "./Settings/Settings";
 import { settingsReducer } from "./redux/settings";
+import { getModsToUpdate } from "./redux/selectors";
+import { GAME_ID } from "./constants";
 
 function makeRepositoryLookup(api: IExtensionApi) {
   return async (repoInfo: IModRepoId): Promise<IModLookupResult[]> => {
@@ -57,7 +59,7 @@ function makeRepositoryLookup(api: IExtensionApi) {
 const checkForUpdates =
   (api: IExtensionApi) =>
   async (gameId: string, mods: { [id: string]: IMod }) => {
-    if (gameId !== "teso") return;
+    if (gameId !== GAME_ID) return;
 
     const filteredMods = Object.values(mods)
       .filter(
@@ -118,7 +120,7 @@ const installUpdates =
   (api: IExtensionApi) => async (gameId: string, modId: string) => {
     // @TODO: Check if we already have an update installed and just enable that instead of re-installing it
 
-    if (gameId !== "teso") return;
+    if (gameId !== GAME_ID) return;
 
     const mods = api.getState().persistent.mods["teso"];
     const mod =
@@ -153,7 +155,7 @@ const init = (context: IExtensionContext) => {
     },
     {
       condition: () =>
-        selectors.activeGameId(context.api.store.getState()) === "teso",
+        selectors.activeGameId(context.api.store.getState()) === GAME_ID,
       icon: "idea",
     }
   );
@@ -161,7 +163,7 @@ const init = (context: IExtensionContext) => {
   context.registerMainPage("search", "ESO UI", ModList, {
     group: "per-game",
     visible: () =>
-      selectors.activeGameId(context.api.store.getState()) == "teso",
+      selectors.activeGameId(context.api.store.getState()) == GAME_ID,
     props: () => ({ api: context.api, mods: [] }),
   });
 
@@ -215,7 +217,7 @@ const init = (context: IExtensionContext) => {
     "esoui",
     50,
     async () => ({
-      supported: selectors.activeGameId(context.api.getState()) === "teso",
+      supported: selectors.activeGameId(context.api.getState()) === GAME_ID,
       requiredFiles: [],
     }),
     async (files: string[], destinationPath: string) => {
@@ -346,7 +348,7 @@ const init = (context: IExtensionContext) => {
     context.api.events.on(
       "mods-enabled",
       (modIds: string[], enabled: boolean, gameId: string) => {
-        if (!enabled || gameId !== "teso") return;
+        if (!enabled || gameId !== GAME_ID) return;
         modIds.forEach((modId) => {
           const api = context.api;
           const mod = api.getState().persistent.mods[gameId][modId];
@@ -357,6 +359,7 @@ const init = (context: IExtensionContext) => {
 
           if (!md5Hint) return;
 
+          // @TODO: Use selector here
           Object.values(api.getState().persistent.mods[gameId])
             .filter((modToCheck) => {
               if (!modToCheck.rules?.length) return false;
@@ -404,7 +407,7 @@ const init = (context: IExtensionContext) => {
       const autoUpdate = settings["esoui"]["autoUpdate"];
 
       if (!autoUpdate) return;
-      if (gameMode !== "teso") return;
+      if (gameMode !== GAME_ID) return;
 
       const state = context.api.getState();
 
@@ -419,7 +422,9 @@ const init = (context: IExtensionContext) => {
           )
         )
         .then(() => {
-          const modsToUpdate = Object.values(state.persistent.mods?.teso ?? {})
+          const modsToUpdate = Object.values(
+            state.persistent.mods?.teso ?? {}
+          )
             .filter(
               (mod) =>
                 !!mod.attributes?.newestVersion &&
@@ -499,6 +504,7 @@ const init = (context: IExtensionContext) => {
   );
 };
 
+// @TODO: Move to selectors
 const getCurrentEnabledModForAddon = (
   api: IExtensionApi,
   addonId: string | number
@@ -516,4 +522,4 @@ const getCurrentEnabledModForAddon = (
     );
 };
 
-module.exports = { default: init };
+module.exports = {default: init};
