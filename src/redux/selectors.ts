@@ -39,9 +39,18 @@ export const getDependencyRulesForMod = (
 };
 
 export const getModsToUpdate = (state: IState): IMod[] =>
-  Object.values(state.persistent.mods[GAME_ID] ?? {}).filter(
-    (mod) =>
-      !!mod.attributes?.newestVersion &&
-      !!mod.attributes?.version &&
-      mod.attributes?.newestVersion !== mod.attributes.version
-  );
+  Object.values(state.persistent.mods[GAME_ID] ?? {})
+    .filter(
+      (mod) =>
+        !!mod.attributes?.newestVersion &&
+        !!mod.attributes?.version &&
+        mod.attributes?.newestVersion !== mod.attributes.version
+    )
+    .filter(
+      (mod) =>
+        !Object.values(state.persistent.mods["teso"]).some(
+          (installedMod) =>
+            installedMod.attributes.modId === mod.attributes.modId &&
+            installedMod.attributes.version === mod.attributes.newestVersion
+        )
+    );

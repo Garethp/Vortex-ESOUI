@@ -421,38 +421,19 @@ const init = (context: IExtensionContext) => {
             {}
           )
         )
-        .then(() => {
-          const modsToUpdate = Object.values(
-            state.persistent.mods?.teso ?? {}
+        .then(() =>
+          Promise.all(
+            getModsToUpdate(context.api.getState()).map((mod) =>
+              context.api.emitAndAwait(
+                "mod-update",
+                "teso",
+                mod.id,
+                mod.attributes?.newestVersion,
+                mod.attributes?.source
+              )
+            )
           )
-            .filter(
-              (mod) =>
-                !!mod.attributes?.newestVersion &&
-                !!mod.attributes?.version &&
-                mod.attributes?.newestVersion !== mod.attributes.version
-            )
-            .filter(
-              (mod) =>
-                !Object.values(state.persistent.mods["teso"]).some(
-                  (installedMod) =>
-                    installedMod.attributes.modId === mod.attributes.modId &&
-                    installedMod.attributes.version ===
-                      mod.attributes.newestVersion
-                )
-            );
-
-          const updateEvents = modsToUpdate.map((mod) =>
-            context.api.emitAndAwait(
-              "mod-update",
-              "teso",
-              mod.id,
-              mod.attributes?.newestVersion,
-              mod.attributes?.source
-            )
-          );
-
-          return Promise.all(updateEvents);
-        });
+        );
     });
   });
 
@@ -522,4 +503,4 @@ const getCurrentEnabledModForAddon = (
     );
 };
 
-module.exports = {default: init};
+module.exports = { default: init };
