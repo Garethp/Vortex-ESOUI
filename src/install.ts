@@ -87,7 +87,7 @@ export const installMod = async (mod: ModItem, api: IExtensionApi) => {
   }
 
   const settings = api.getState().settings;
-  const autoUpdate = settings.automation.enable;
+  const autoEnable = settings.automation.enable;
 
   modsToInstall.forEach((mod) => {
     const isAnUpdate = addedIds.includes(mod.id);
@@ -130,7 +130,7 @@ export const installMod = async (mod: ModItem, api: IExtensionApi) => {
             },
             (err, modId) => {
               if (!!err) return;
-              if (!autoUpdate && isAnUpdate && modIsActive) {
+              if (!autoEnable && isAnUpdate && modIsActive) {
                 actions.setModsEnabled(
                   api,
                   selectors.activeProfile(api.getState()).id,
@@ -138,7 +138,9 @@ export const installMod = async (mod: ModItem, api: IExtensionApi) => {
                   true,
                   { willBeReplaced: true }
                 );
+              }
 
+              if (isAnUpdate && modIsActive) {
                 alreadyInstalledMods.forEach((alreadyInstalledMod) => {
                   const modIsActive = alreadyInstalledMods.some(
                     (alreadyInstalledMod) =>

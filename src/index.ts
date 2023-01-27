@@ -253,8 +253,10 @@ const init = (context: IExtensionContext) => {
           .readFileSync(path.join(destinationPath, infoFile))
           .toString();
 
-        const [, requiredMods] =
-          modData.match(`## DependsOn: ((([^\\s]+) ?)+)`) ?? [];
+        const [...allRequiredMods] =
+          // @ts-ignore
+          modData.matchAll(`## DependsOn: ((([^\\s]+) ?)+)`) ?? [];
+        const requiredMods = allRequiredMods.map((match) => match[1]).join(" ");
 
         const requiredModsList = !!requiredMods ? requiredMods.split(" ") : [];
 
@@ -417,9 +419,7 @@ const init = (context: IExtensionContext) => {
           )
         )
         .then(() => {
-          const modsToUpdate = Object.values(
-            state.persistent.mods?.teso ?? {}
-          )
+          const modsToUpdate = Object.values(state.persistent.mods?.teso ?? {})
             .filter(
               (mod) =>
                 !!mod.attributes?.newestVersion &&

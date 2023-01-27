@@ -10,13 +10,15 @@
     "outDir": "./out",
     "jsx": "react",
     "sourceMap": false,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "lib": ["ES2021", "dom"],
+    "skipLibCheck": true
   },
   "exclude": [
-      "node_modules"
-    ],
-  "files": [
-    "src/index.ts",
-    "src/getSafe.ts"
-  ]
+    "node_modules",
+    "./node_modules",
+    "./node_modules/*",
+    "./node_modules/@types/node/index.d.ts"
+  ],
+  "include": ["src/**/*.ts"]
 }

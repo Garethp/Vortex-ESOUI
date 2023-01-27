@@ -1,5 +1,9 @@
 ## Changelog
 
+#### Version 0.1.4
+ * Fixed an issue where some Addons who declare their dependencies on two lines don't have their rules mapped properly
+ * Fixed an issue where installing an update while auto enable is true doesn't disable the old version
+
 #### Version 0.1.3
  * Fixed an issue where the auto-update would try to update mods even when the update was already installed
 
