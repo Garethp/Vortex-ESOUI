@@ -234,6 +234,7 @@
   "version" "4.2.2"
 
 "7z-bin@Nexus-Mods/7z-bin":
+  "integrity" "sha512-sfFdGVHsuEn+eSa1JWG03/NPjdJjzJ3IlN49rjYMcTagsfp2RGPVzdE80OClKMR2XDLvXoIvVySuN3NQI0iTjw=="
   "resolved" "git+ssh://git@github.com/Nexus-Mods/7z-bin.git#018d9229edf5ae962ede43a2ef30a68bc739d42c"
   "version" "22.0.1"
 
@@ -3620,6 +3621,7 @@
   "version" "1.1.2"
 
 "vortex-api@Nexus-Mods/vortex-api":
+  "integrity" "sha512-ybNX3qn4SZBtE5WD4UYNw6nU5HDmHtAuRSaBZnJUcWqT64dkdfKAx5HrQGjNvH/SdJdmRZr9ofuLmCNAggnWlQ=="
   "resolved" "git+ssh://git@github.com/Nexus-Mods/vortex-api.git#f910eaf14c2e55c705bdf4d87ec36ea71ec3c0b1"
   "version" "1.7.0"
 

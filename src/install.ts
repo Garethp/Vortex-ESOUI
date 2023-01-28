@@ -1,9 +1,10 @@
 import { getDependantMods } from "./utils";
 import { IExtensionApi } from "vortex-api/lib/types/IExtensionContext";
 import ESOUIClient, { ModItem } from "./ESOUIClient";
-import { actions, selectors, util } from "vortex-api";
+import { actions, selectors } from "vortex-api";
 import { IMod } from "vortex-api/lib/extensions/mod_management/types/IMod";
 import { GAME_ID } from "./constants";
+import { getAddedModIds } from "./redux/selectors";
 
 export const installMod = async (mod: ModItem, api: IExtensionApi) => {
   const client = new ESOUIClient(api);
@@ -33,7 +34,7 @@ export const installMod = async (mod: ModItem, api: IExtensionApi) => {
     fileName: mod.fileName,
   });
 
-  const addedIds = getAddedModIds(api);
+  const addedIds = getAddedModIds(api.getState());
 
   while (unresolvedMods.length > 0) {
     const modToResolve = unresolvedMods[0];
@@ -173,24 +174,4 @@ export const installMod = async (mod: ModItem, api: IExtensionApi) => {
       }
     );
   });
-};
-
-export const getAddedModIds = (api: IExtensionApi): number[] => {
-  const installedMods: { [id: string]: IMod } =
-    api.store.getState().persistent.mods.teso ?? {};
-
-  const installedIds = Object.values(installedMods)
-    .filter((mod) => util.getSafe(mod.attributes, ["source"], null) === "esoui")
-    .filter((mod) => util.getSafe(mod.attributes, ["modId"], null) != null)
-    .map((mod) => util.getSafe(mod.attributes, ["modId"], null));
-
-  const downloadedMods = api.store.getState().persistent.downloads.files ?? {};
-  const downloadedIds = Object.values(downloadedMods)
-    .filter(
-      (mod) => util.getSafe(mod, ["modInfo", "source"], undefined) === "esoui"
-    )
-    .filter((mod) => util.getSafe(mod, ["modInfo", "modId"], null) != null)
-    .map((mod) => util.getSafe(mod, ["modInfo", "modId"], null));
-
-  return [...installedIds, ...downloadedIds];
 };
