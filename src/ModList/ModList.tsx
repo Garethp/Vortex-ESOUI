@@ -4,7 +4,8 @@ import LoadingSpinner from "../LoadingSpinner";
 import ESOUIClient, { ModItem, ModListItem } from "../ESOUIClient";
 import { MainPage, FlexLayout, Table, TableTextFilter } from "vortex-api";
 import ModDetails from "./ModDetails";
-import { getAddedModIds, installMod } from "../install";
+import { installMod } from "../install";
+import { getAddedModIds } from "../redux/selectors";
 
 export default ({ api }: { api: IExtensionContext["api"] }) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -13,7 +14,7 @@ export default ({ api }: { api: IExtensionContext["api"] }) => {
 
   const client = new ESOUIClient(api);
 
-  const addedIds = getAddedModIds(api);
+  const addedIds = getAddedModIds(api.getState());
 
   useEffect(() => {
     client.getAllMods().then((modList: ModListItem[]) => {

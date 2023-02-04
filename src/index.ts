@@ -4,12 +4,8 @@ import {
   IExtensionContext,
 } from "vortex-api/lib/types/IExtensionContext";
 import ModList from "./ModList/ModList";
-import {
-  IMod,
-  IModRepoId,
-} from "vortex-api/lib/extensions/mod_management/types/IMod";
+import { IMod } from "vortex-api/lib/extensions/mod_management/types/IMod";
 import ESOUIClient from "./ESOUIClient";
-import { IModLookupResult } from "vortex-api/lib/types/IModLookupResult";
 import * as path from "path";
 import * as fs from "fs";
 import { getDependantMods } from "./utils";
@@ -18,46 +14,34 @@ import { installMod } from "./install";
 import { esoUIReducer } from "./redux/main-state";
 import Settings from "./Settings/Settings";
 import { settingsReducer } from "./redux/settings";
+import {
+  getDependencyRulesForMod,
+  getModsToUpdate,
+  isTESOActiveGame,
+} from "./redux/selectors";
+import { GAME_ID } from "./constants";
+import { repositoryLookupFactory } from "./repositoryLookup";
 
-function makeRepositoryLookup(api: IExtensionApi) {
-  return async (repoInfo: IModRepoId): Promise<IModLookupResult[]> => {
-    const modId = parseInt(repoInfo.modId, 10);
+const protocolHandlerFactory = (api: IExtensionApi) => {
+  return async (url) => {
+    if (!url.match("^vortex-esoui://install/([\\d]+)$")) {
+      return;
+    }
 
+    const [_, id] = url.match("^vortex-esoui://install/([\\d]+)$");
     const client = new ESOUIClient(api);
-    const modDetails = await client.getModDetails(modId);
 
-    const res: IModLookupResult = {
-      key: `${repoInfo.gameId}_${modDetails.title}_${modDetails.version}`,
-      value: {
-        fileName: modDetails.fileName,
-        fileSizeBytes: 1,
-        fileVersion: modDetails.version,
-        gameId: "teso",
-        domainName: "teso",
-        sourceURI: modDetails.downloadUri,
-        source: "esoui",
-        logicalFileName: repoInfo.fileId,
-        archived: false,
-        rules: [],
-        details: {
-          modId: repoInfo.modId,
-          fileId: repoInfo.fileId,
-          author: modDetails.author,
-          category: "",
-          description: "",
-          homepage: modDetails.downloadUri,
-        },
-      },
-    };
+    const mod = await client.getModDetails(id);
 
-    return [res];
+    if (!mod) return;
+    return installMod(mod, api);
   };
-}
+};
 
 const checkForUpdates =
   (api: IExtensionApi) =>
   async (gameId: string, mods: { [id: string]: IMod }) => {
-    if (gameId !== "teso") return;
+    if (gameId !== GAME_ID) return;
 
     const filteredMods = Object.values(mods)
       .filter(
@@ -118,7 +102,7 @@ const installUpdates =
   (api: IExtensionApi) => async (gameId: string, modId: string) => {
     // @TODO: Check if we already have an update installed and just enable that instead of re-installing it
 
-    if (gameId !== "teso") return;
+    if (gameId !== GAME_ID) return;
 
     const mods = api.getState().persistent.mods["teso"];
     const mod =
@@ -152,16 +136,14 @@ const init = (context: IExtensionContext) => {
       );
     },
     {
-      condition: () =>
-        selectors.activeGameId(context.api.store.getState()) === "teso",
+      condition: () => isTESOActiveGame(context.api.getState()),
       icon: "idea",
     }
   );
 
   context.registerMainPage("search", "ESO UI", ModList, {
     group: "per-game",
-    visible: () =>
-      selectors.activeGameId(context.api.store.getState()) == "teso",
+    visible: () => isTESOActiveGame(context.api.getState()),
     props: () => ({ api: context.api, mods: [] }),
   });
 
@@ -215,7 +197,7 @@ const init = (context: IExtensionContext) => {
     "esoui",
     50,
     async () => ({
-      supported: selectors.activeGameId(context.api.getState()) === "teso",
+      supported: selectors.activeGameId(context.api.getState()) === GAME_ID,
       requiredFiles: [],
     }),
     async (files: string[], destinationPath: string) => {
@@ -320,19 +302,12 @@ const init = (context: IExtensionContext) => {
   context.registerSettings("Download", Settings, undefined, undefined, 100);
 
   context.once(() => {
-    context.api.registerProtocol("vortex-esoui", true, async (url) => {
-      if (!url.match("^vortex-esoui://install/([\\d]+)$")) {
-        return;
-      }
+    context.api.registerProtocol(
+      "vortex-esoui",
+      true,
+      protocolHandlerFactory(context.api)
+    );
 
-      const [_, id] = url.match("^vortex-esoui://install/([\\d]+)$");
-      const client = new ESOUIClient(context.api);
-
-      const mod = await client.getModDetails(id);
-
-      if (!mod) return;
-      return installMod(mod, context.api);
-    });
     context.api.setStylesheet("esoui", path.join(__dirname, "index.scss"));
     context.api.events.on("check-mods-version", checkForUpdates(context.api));
     context.api.events.on("mod-update", installUpdates(context.api));
@@ -340,13 +315,13 @@ const init = (context: IExtensionContext) => {
     context.api.registerRepositoryLookup(
       "esoui",
       true,
-      makeRepositoryLookup(context.api)
+      repositoryLookupFactory(context.api)
     );
 
     context.api.events.on(
       "mods-enabled",
       (modIds: string[], enabled: boolean, gameId: string) => {
-        if (!enabled || gameId !== "teso") return;
+        if (!enabled || gameId !== GAME_ID) return;
         modIds.forEach((modId) => {
           const api = context.api;
           const mod = api.getState().persistent.mods[gameId][modId];
@@ -357,41 +332,22 @@ const init = (context: IExtensionContext) => {
 
           if (!md5Hint) return;
 
-          Object.values(api.getState().persistent.mods[gameId])
-            .filter((modToCheck) => {
-              if (!modToCheck.rules?.length) return false;
-
-              const relevantRules = modToCheck.rules.filter(
-                (rule) =>
-                  rule.reference.repo.repository === "esoui" &&
-                  rule.reference.repo.modId === `${mod.attributes.modId}`
-              );
-
-              return relevantRules.length > 0;
-            })
-            .forEach((modToCheck) => {
-              const ruleToUpdate = modToCheck.rules.find(
-                (rule) =>
-                  rule.reference.repo.repository === "esoui" &&
-                  rule.reference.repo.modId === `${mod.attributes.modId}`
-              );
-
-              if (!ruleToUpdate) return;
-
-              api.store.dispatch(
-                actions.removeModRule(gameId, modToCheck.id, ruleToUpdate)
-              );
-              api.store.dispatch(
-                actions.addModRule(gameId, modToCheck.id, {
-                  ...ruleToUpdate,
-                  reference: {
-                    ...ruleToUpdate.reference,
-                    idHint: undefined,
-                    md5Hint,
-                  },
-                })
-              );
-            });
+          getDependencyRulesForMod(
+            api.getState(),
+            mod.attributes.modId
+          ).forEach(({ modId, rule }) => {
+            api.store.dispatch(actions.removeModRule(gameId, modId, rule));
+            api.store.dispatch(
+              actions.addModRule(gameId, modId, {
+                ...rule,
+                reference: {
+                  ...rule.reference,
+                  idHint: undefined,
+                  md5Hint,
+                },
+              })
+            );
+          });
         });
       }
     );
@@ -404,9 +360,7 @@ const init = (context: IExtensionContext) => {
       const autoUpdate = settings["esoui"]["autoUpdate"];
 
       if (!autoUpdate) return;
-      if (gameMode !== "teso") return;
-
-      const state = context.api.getState();
+      if (gameMode !== GAME_ID) return;
 
       context.api
         .emitAndAwait(
@@ -418,36 +372,19 @@ const init = (context: IExtensionContext) => {
             {}
           )
         )
-        .then(() => {
-          const modsToUpdate = Object.values(state.persistent.mods?.teso ?? {})
-            .filter(
-              (mod) =>
-                !!mod.attributes?.newestVersion &&
-                !!mod.attributes?.version &&
-                mod.attributes?.newestVersion !== mod.attributes.version
+        .then(() =>
+          Promise.all(
+            getModsToUpdate(context.api.getState()).map((mod) =>
+              context.api.emitAndAwait(
+                "mod-update",
+                "teso",
+                mod.id,
+                mod.attributes?.newestVersion,
+                mod.attributes?.source
+              )
             )
-            .filter(
-              (mod) =>
-                !Object.values(state.persistent.mods["teso"]).some(
-                  (installedMod) =>
-                    installedMod.attributes.modId === mod.attributes.modId &&
-                    installedMod.attributes.version ===
-                      mod.attributes.newestVersion
-                )
-            );
-
-          const updateEvents = modsToUpdate.map((mod) =>
-            context.api.emitAndAwait(
-              "mod-update",
-              "teso",
-              mod.id,
-              mod.attributes?.newestVersion,
-              mod.attributes?.source
-            )
-          );
-
-          return Promise.all(updateEvents);
-        });
+          )
+        );
     });
   });
 
@@ -499,6 +436,7 @@ const init = (context: IExtensionContext) => {
   );
 };
 
+// @TODO: Move to selectors
 const getCurrentEnabledModForAddon = (
   api: IExtensionApi,
   addonId: string | number

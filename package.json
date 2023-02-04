@@ -18,16 +18,16 @@
     ]
   },
   "devDependencies": {
-    "7z-bin": "Nexus-Mods/7z-bin",
     "@types/i18next": "^12.1.0",
     "@types/node": "^14.18.36",
     "@types/react": "^16.8.22",
     "@types/redux": "^3.6.0",
     "@types/redux-thunk": "^2.1.0",
+    "7z-bin": "Nexus-Mods/7z-bin",
     "bbcode-to-react": "^0.2.9",
-    "bluebird": "^3.5.5",
+    "bluebird": "^3.7.2",
     "copyfiles": "^2.4.1",
-    "electron": "4.2.4",
+    "electron": "^22.0.0",
     "i18next": "^17.0.4",
     "prettier": "^2.8.1",
     "react": "^16.8.6",
@@ -40,6 +40,5 @@
     "vortex-ext-http": "0.0.4",
     "webpack": "^4.35.0",
     "webpack-cli": "^3.3.4"
-  },
-  "dependencies": {}
+  }
 }
