@@ -21,6 +21,7 @@ import {
 } from "./redux/selectors";
 import { GAME_ID } from "./constants";
 import { repositoryLookupFactory } from "./repositoryLookup";
+import { IGame } from "vortex-api/lib/types/IGame";
 
 const protocolHandlerFactory = (api: IExtensionApi) => {
   return async (url) => {
@@ -387,6 +388,131 @@ const init = (context: IExtensionContext) => {
         );
     });
   });
+
+  context.registerAction(
+    "mod-icons",
+    115,
+    "import",
+    {},
+    "Import Existing Addons",
+    () => {
+      const state = context.api.store.getState();
+      const gameRef: IGame = util.getGame(selectors.activeGameId(state));
+      const installPath: string = util.getSafe(
+        state,
+        ["settings", "gameMode", "discovered", gameRef.id, "path"],
+        undefined
+      );
+      if (installPath === undefined) {
+        throw new Error(`Could not resolve game path for "${gameRef.id}"`);
+      }
+      // Check if the extension provided us with a "custom" directory
+      //  to open when the button is clicked - otherwise assume we
+      //  just need to use the default queryModPath value.
+      let modPath =
+        !!gameRef.details && !!gameRef.details.customOpenModsPath
+          ? gameRef.details.customOpenModsPath
+          : gameRef.queryModPath(installPath);
+      if (!path.isAbsolute(modPath)) {
+        // We add a path separator at the end to avoid running executables
+        //  instead of opening file explorer. This happens when the
+        //  a game's mods folder is named like its executable.
+        //  e.g. Vampire the Masquerade's default modding folder is ../Vampire/
+        //  and within the same directory ../Vampire.exe exists as well.
+        modPath = path.join(installPath, modPath) + path.sep;
+      }
+
+      const addons = fs.readdirSync(modPath);
+      const allAddons = new ESOUIClient(context.api)
+        .getAllMods(true)
+        .then(async (allMods) => {
+          const addonsToImport = addons
+            .filter((name) => {
+              // Maybe check that it's not already managed
+
+              return fs.existsSync(
+                `${modPath}${path.sep}${name}${path.sep}${name}.txt`
+              );
+            })
+            .map((name) => {
+              const addonText = fs
+                .readFileSync(
+                  `${modPath}${path.sep}${name}${path.sep}${name}.txt`
+                )
+                .toString();
+
+              return {
+                title: addonText.match(/## Title: (.*)/)[1],
+                author: addonText.match(/## Author: (.*)/)[1],
+                path: name,
+              };
+            })
+            .filter((details) => {
+              return (
+                details.title !== undefined && details.author !== undefined
+              );
+            })
+            .map((details) => {
+              const sanitize = (input: string): string =>
+                input
+                  .replaceAll(/\|c[a-fA-F0-9]{6}(.*?)\|r/g, "$1")
+                  .replaceAll(/\|c[a-fA-F0-9]{6}/g, "");
+
+              return {
+                ...details,
+                title: sanitize(details.title),
+                author: sanitize(details.author),
+              };
+            });
+
+          // These mods are quick and easy to match, we've got a clean match by their name and author
+          const matchedAddons = addonsToImport.filter((details) => {
+            return (
+              allMods.filter(
+                (mod) =>
+                  mod.title == details.title &&
+                  mod.author == details.author &&
+                  mod.addons.length === 1 &&
+                  mod.addons[0].path === details.path
+              ).length == 1
+            );
+          });
+
+          let unmatchedAddons = addonsToImport.filter(
+            (details) =>
+              !matchedAddons.find((match) => match.path === details.path)
+          );
+
+          // These mods we can match because there's only one mod in the API that provides this (and only this) module
+          const quickMatch = unmatchedAddons.filter((details) => {
+            return (
+              allMods.filter(
+                (mod) =>
+                  mod.addons?.length === 1 &&
+                  mod.addons[0].path === details.path
+              ).length === 1
+            );
+          });
+
+          unmatchedAddons = unmatchedAddons.filter(
+            (details) =>
+              !quickMatch.find((match) => match.path === details.path)
+          );
+
+          // @TODO: It looks like we're not going to be able to do a sum check on the existing folder. Best bet is to
+          // just with the user
+
+          // @TODO: Show a dialogue of all the addons that we're unable to import
+
+          console.log({ matchedAddons, unmatchedAddons, quickMatch });
+
+          // Split the addons into "easy to import" (file md5 matches what's in the DB) and "user confirmation required"
+          // (Ask the user if they're happy to override the addon
+
+          // Do the imports
+        });
+    }
+  );
 
   context.registerAction(
     "mods-action-icons",
