@@ -21,6 +21,7 @@ import {
 } from "./redux/selectors";
 import { GAME_ID } from "./constants";
 import { repositoryLookupFactory } from "./repositoryLookup";
+import { registerModlistBackupIntegration } from "./modlist-backup-integration";
 
 const protocolHandlerFactory = (api: IExtensionApi) => {
   return async (url) => {
@@ -302,6 +303,8 @@ const init = (context: IExtensionContext) => {
   context.registerSettings("Download", Settings, undefined, undefined, 100);
 
   context.once(() => {
+    registerModlistBackupIntegration(context.api);
+
     context.api.registerProtocol(
       "vortex-esoui",
       true,

@@ -6,7 +6,10 @@ import { IMod } from "vortex-api/lib/extensions/mod_management/types/IMod";
 import { GAME_ID } from "./constants";
 import { getAddedModIds } from "./redux/selectors";
 
-export const installMod = async (mod: ModItem, api: IExtensionApi) => {
+export const installMod = async (mod: ModItem, api: IExtensionApi) =>
+  installMods([mod], api);
+
+export const installMods = async (mods: ModItem[], api: IExtensionApi) => {
   const client = new ESOUIClient(api);
   const allMods = await client.getAllMods();
 
@@ -16,6 +19,7 @@ export const installMod = async (mod: ModItem, api: IExtensionApi) => {
     downloadUri: string;
     modPage: string;
     fileName: string;
+    installDisabled: boolean;
   }[] = [];
 
   const unresolvedMods: {
@@ -24,14 +28,18 @@ export const installMod = async (mod: ModItem, api: IExtensionApi) => {
     downloadUri: string;
     modPage: string;
     fileName: string;
+    installDisabled: boolean;
   }[] = [];
 
-  unresolvedMods.push({
-    id: mod.id,
-    title: mod.title,
-    downloadUri: mod.downloadUri,
-    modPage: allMods.find((m) => m.id === mod.id).fileInfoUri,
-    fileName: mod.fileName,
+  mods.forEach((mod) => {
+    unresolvedMods.push({
+      id: mod.id,
+      title: mod.title,
+      downloadUri: mod.downloadUri,
+      modPage: allMods.find((m) => m.id === mod.id).fileInfoUri,
+      fileName: mod.fileName,
+      installDisabled: mod.installDisabled ?? false,
+    });
   });
 
   const addedIds = getAddedModIds(api.getState());
@@ -49,7 +57,7 @@ export const installMod = async (mod: ModItem, api: IExtensionApi) => {
     if (
       !!modsToInstall.find((item) => item.id === unresolvedModListItem.id) ||
       (!!addedIds.includes(unresolvedModListItem.id) &&
-        unresolvedModListItem.id != mod.id)
+        !mods.find((mod) => unresolvedModListItem.id != mod.id))
     )
       continue;
 
@@ -65,6 +73,24 @@ export const installMod = async (mod: ModItem, api: IExtensionApi) => {
       if (mod.length !== 1) continue;
 
       const modItem = allMods.find((m) => `${m.id}` === mod[0].id);
+
+      // If we've already resolved a dependency and this mod isn't meant to be installed disabled, make sure the dependency isn't either
+      if (
+        unresolvedMods.find((item) => item.id === modItem.id) &&
+        !modToResolve.installDisabled
+      ) {
+        unresolvedMods.find((item) => item.id === modItem.id).installDisabled =
+          false;
+      }
+
+      // If we've already added a dependency and this mod isn't meant to be installed disabled, make sure the dependency isn't either
+      if (
+        modsToInstall.find((item) => item.id === modItem.id) &&
+        !modToResolve.installDisabled
+      ) {
+        modsToInstall.find((item) => item.id === modItem.id).installDisabled =
+          false;
+      }
 
       // Prevent queuing up multiple of the same dependencies
       if (
@@ -82,6 +108,7 @@ export const installMod = async (mod: ModItem, api: IExtensionApi) => {
         modPage: modItem.fileInfoUri,
         downloadUri: modItemWithInfo.downloadUri,
         fileName: modItemWithInfo.fileName,
+        installDisabled: modToResolve.installDisabled,
       });
     }
 
@@ -127,12 +154,19 @@ export const installMod = async (mod: ModItem, api: IExtensionApi) => {
             "start-install-download",
             downloadId,
             {
-              allowAutoEnable: !alreadyInstalledMods.length || modIsActive,
+              allowAutoEnable:
+                !mod.installDisabled &&
+                (!alreadyInstalledMods.length || modIsActive),
               unattended: true,
             },
             (err, modId) => {
               if (!!err) return;
-              if (!autoEnable && isAnUpdate && modIsActive) {
+              if (
+                !autoEnable &&
+                isAnUpdate &&
+                modIsActive &&
+                !mod.installDisabled
+              ) {
                 actions.setModsEnabled(
                   api,
                   selectors.activeProfile(api.getState()).id,

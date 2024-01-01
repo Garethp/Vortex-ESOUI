@@ -1,14 +1,13 @@
 {
   "name": "eso-ui-integration",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "An integration for Vortex to use ESOUI",
   "main": "./dist/index.js",
   "repository": "",
   "scripts": {
-    "webpack": "node ./node_modules/webpack/bin/webpack --config webpack.config.js --display-error-details --progress --profile --color",
-    "bundle7z": "7z a -t7z esoui_integration.7z ./dist/index.js ./dist/info.json ./dist/index.scss",
-    "build": "npm run webpack && copyfiles -f src/index.scss dist && extractInfo",
-    "bundle": "npm run build && npm run bundle7z",
+    "bundle7z": "yarn 7z a -t7z esoui_integration.7z ./dist/index.js ./dist/info.json ./dist/index.scss",
+    "build": "yarn webpack && yarn copyfiles -f src/index.scss dist && yarn extractInfo",
+    "bundle": "yarn build && yarn bundle7z",
     "lint": "prettier src/ --write"
   },
   "author": "Garethp",
@@ -18,12 +17,12 @@
     ]
   },
   "devDependencies": {
+    "7z-bin": "Nexus-Mods/7z-bin",
     "@types/i18next": "^12.1.0",
     "@types/node": "^14.18.36",
     "@types/react": "^16.8.22",
     "@types/redux": "^3.6.0",
     "@types/redux-thunk": "^2.1.0",
-    "7z-bin": "Nexus-Mods/7z-bin",
     "bbcode-to-react": "^0.2.9",
     "bluebird": "^3.7.2",
     "copyfiles": "^2.4.1",

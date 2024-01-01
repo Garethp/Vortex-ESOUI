@@ -32,6 +32,11 @@ export type ModItem = ModListItem & {
   downloadUri: string;
   images?: Image[];
   fileName: string;
+
+  /**
+   * This exists specifically and only for the modlist backup integration
+   */
+  installDisabled?: boolean;
 };
 
 export type Image = {
