@@ -1,4 +1,4 @@
-import { HttpClient } from "vortex-ext-http";
+import { HttpClient } from "./HttpClient";
 import { IExtensionApi } from "vortex-api/lib/types/IExtensionContext";
 import { ESOUIState, updateModItem, updateModList } from "./redux/main-state";
 
@@ -59,7 +59,7 @@ export default class ESOUIClient extends HttpClient {
   private api: IExtensionApi;
 
   constructor(api: IExtensionApi) {
-    super("ESOUI");
+    super();
 
     this.api = api;
   }

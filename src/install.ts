@@ -55,11 +55,14 @@ export const installMods = async (mods: ModItem[], api: IExtensionApi) => {
 
     // Prevent queuing up multiple of the same dependencies
     if (
+      // If our list of mods to install already includes this item
       !!modsToInstall.find((item) => item.id === unresolvedModListItem.id) ||
+      // Or if we've already added the mod **and the mod isn't in our explicitly install list**
       (!!addedIds.includes(unresolvedModListItem.id) &&
-        !mods.find((mod) => unresolvedModListItem.id != mod.id))
-    )
+        !mods.find((mod) => unresolvedModListItem.id == mod.id))
+    ) {
       continue;
+    }
 
     const requiredDependencies = unresolvedModListItem.addons.reduce(
       (mods, addon) => [...mods, ...(addon.requiredDependencies ?? [])],
@@ -97,8 +100,9 @@ export const installMods = async (mods: ModItem[], api: IExtensionApi) => {
         !!unresolvedMods.find((item) => item.id === modItem.id) ||
         !!modsToInstall.find((item) => item.id === modItem.id) ||
         !!addedIds.includes(modItem.id)
-      )
+      ) {
         continue;
+      }
 
       const modItemWithInfo = await client.getModDetails(modItem.id);
 
